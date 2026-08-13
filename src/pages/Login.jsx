@@ -1,12 +1,29 @@
 import { motion } from 'framer-motion'
-import { useParams } from 'react-router-dom'
-import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Login() {
   const { inviteCode } = useParams()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+
+  useEffect(() => {
+    // Si ya hay sesión (venimos de abrir el enlace mágico, o ya habíamos
+    // entrado antes), no nos quedamos en el login: vamos al panel.
+    // De momento todo el mundo va a /profesor; más adelante esto
+    // comprobará si el usuario es profesor o alumno y le llevará a cada uno.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate('/profesor', { replace: true })
+    })
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate('/profesor', { replace: true })
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [navigate])
 
   async function handleLogin(e) {
     e.preventDefault()
