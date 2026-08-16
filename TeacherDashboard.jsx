@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
 export default function TeacherDashboard() {
   const [students, setStudents] = useState([])
   const [inviteLink, setInviteLink] = useState(null)
-  const [copied, setCopied] = useState(false)
+  const [debugInfo, setDebugInfo] = useState('(sin pulsar aún)')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -18,22 +18,16 @@ export default function TeacherDashboard() {
   }, [])
 
   async function createInvite() {
+    setDebugInfo('pulsado, esperando respuesta...')
     const { data, error } = await supabase.rpc('create_invite')
     if (error) {
-      console.error(error)
+      setDebugInfo('ERROR: ' + JSON.stringify(error))
       return
     }
+    setDebugInfo('respuesta recibida: ' + JSON.stringify(data))
     if (data) {
       const link = `${window.location.origin}/join/${data}`
       setInviteLink(link)
-      setCopied(false)
-      try {
-        await navigator.clipboard.writeText(link)
-        setCopied(true)
-      } catch {
-        // Si el navegador bloquea el copiado automático, no pasa nada:
-        // el enlace ya se muestra en pantalla para copiarlo a mano.
-      }
     }
   }
 
@@ -52,37 +46,28 @@ export default function TeacherDashboard() {
         </div>
         <div className="net-divider mb-6" />
 
-        <AnimatePresence>
-          {inviteLink && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-6 bg-court-900 border border-ball/40 rounded-xl p-4"
-            >
-              <p className="text-court-line/50 text-xs mb-2">
-                {copied ? 'Enlace copiado — mándaselo a tu alumno:' : 'Enlace de invitación (cópialo a mano):'}
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  readOnly
-                  value={inviteLink}
-                  onFocus={(e) => e.target.select()}
-                  className="flex-1 bg-court-950 border border-court-700 rounded-lg px-3 py-2 text-xs text-ball font-mono"
-                />
-                <button
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(inviteLink)
-                    setCopied(true)
-                  }}
-                  className="text-xs bg-ball text-court-950 font-semibold rounded-lg px-3 py-2 shrink-0"
-                >
-                  Copiar
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* LÍNEA TEMPORAL DE DEPURACIÓN — la quitamos en cuanto lo resolvamos */}
+        <p className="text-[10px] text-clay font-mono mb-4 break-all">DEBUG: {debugInfo}</p>
+
+        {inviteLink && (
+          <div className="mb-6 bg-court-900 border border-ball/40 rounded-xl p-4">
+            <p className="text-court-line/50 text-xs mb-2">Enlace de invitación:</p>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={inviteLink}
+                onFocus={(e) => e.target.select()}
+                className="flex-1 bg-court-950 border border-court-700 rounded-lg px-3 py-2 text-xs text-ball font-mono"
+              />
+              <button
+                onClick={() => navigator.clipboard.writeText(inviteLink)}
+                className="text-xs bg-ball text-court-950 font-semibold rounded-lg px-3 py-2 shrink-0"
+              >
+                Copiar
+              </button>
+            </div>
+          </div>
+        )}
 
         {students.length === 0 && (
           <p className="text-court-line/50 text-sm">
