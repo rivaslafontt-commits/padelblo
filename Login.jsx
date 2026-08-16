@@ -1,17 +1,43 @@
 import { motion } from 'framer-motion'
-import { useParams } from 'react-router-dom'
-import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Login() {
   const { inviteCode } = useParams()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
 
+  useEffect(() => {
+    async function routeAfterLogin(session) {
+      if (!session) return
+
+      if (inviteCode) {
+        try {
+          await supabase.rpc('accept_invite', { p_code: inviteCode })
+        } catch (e) {
+          console.warn('Invitación ya usada o no válida', e)
+        }
+        navigate('/alumno', { replace: true })
+        return
+      }
+
+      const { data: teacher } = await supabase.from('teachers').select('id').maybeSingle()
+      navigate(teacher ? '/profesor' : '/alumno', { replace: true })
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => routeAfterLogin(session))
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      routeAfterLogin(session)
+    })
+
+    return () => listener.subscription.unsubscribe()
+  }, [navigate, inviteCode])
+
   async function handleLogin(e) {
     e.preventDefault()
-    // El inviteCode (si existe) vincula al alumno con el equipo del profesor
-    // tras el primer login, vía una función RPC en Supabase.
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {

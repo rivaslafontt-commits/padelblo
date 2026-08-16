@@ -17,8 +17,8 @@ export default function TeacherDashboard() {
 
   async function createInvite() {
     const { data } = await supabase.rpc('create_invite')
-    if (data?.code) {
-      const link = `${window.location.origin}/join/${data.code}`
+    if (data) {
+      const link = `${window.location.origin}/join/${data}`
       navigator.clipboard.writeText(link)
       alert(`Enlace copiado: ${link}`)
     }
