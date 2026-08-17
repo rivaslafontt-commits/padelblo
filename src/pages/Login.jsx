@@ -10,25 +10,34 @@ export default function Login() {
   const [sent, setSent] = useState(false)
 
   useEffect(() => {
-    // Si ya hay sesión (venimos de abrir el enlace mágico, o ya habíamos
-    // entrado antes), no nos quedamos en el login: vamos al panel.
-    // De momento todo el mundo va a /profesor; más adelante esto
-    // comprobará si el usuario es profesor o alumno y le llevará a cada uno.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/profesor', { replace: true })
-    })
+    async function routeAfterLogin(session) {
+      if (!session) return
+
+      if (inviteCode) {
+        try {
+          await supabase.rpc('accept_invite', { p_code: inviteCode })
+        } catch (e) {
+          console.warn('Invitación ya usada o no válida', e)
+        }
+        navigate('/alumno', { replace: true })
+        return
+      }
+
+      const { data: teacher } = await supabase.from('teachers').select('id').maybeSingle()
+      navigate(teacher ? '/profesor' : '/alumno', { replace: true })
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => routeAfterLogin(session))
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate('/profesor', { replace: true })
+      routeAfterLogin(session)
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [navigate])
+  }, [navigate, inviteCode])
 
   async function handleLogin(e) {
     e.preventDefault()
-    // El inviteCode (si existe) vincula al alumno con el equipo del profesor
-    // tras el primer login, vía una función RPC en Supabase.
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
