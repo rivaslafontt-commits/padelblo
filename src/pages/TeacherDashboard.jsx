@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 
 export default function TeacherDashboard() {
   const [students, setStudents] = useState([])
+  const [pendingCount, setPendingCount] = useState(0)
   const [inviteLink, setInviteLink] = useState(null)
   const [copied, setCopied] = useState(false)
   const navigate = useNavigate()
@@ -13,6 +14,12 @@ export default function TeacherDashboard() {
     async function load() {
       const { data } = await supabase.from('students').select('*').order('name')
       setStudents(data ?? [])
+
+      const { count } = await supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending_review')
+      setPendingCount(count ?? 0)
     }
     load()
   }, [])
@@ -51,6 +58,15 @@ export default function TeacherDashboard() {
           </motion.button>
         </div>
         <div className="net-divider mb-6" />
+
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={() => navigate('/profesor/pendientes')}
+          className="w-full flex items-center justify-between bg-court-900 border border-ball/40 rounded-xl px-5 py-4 mb-6"
+        >
+          <span className="font-medium">Pendientes de revisar</span>
+          <span className="font-display text-2xl text-ball">{pendingCount}</span>
+        </motion.button>
 
         {inviteLink && (
           <div className="mb-6 bg-court-900 border border-ball/40 rounded-xl p-4">

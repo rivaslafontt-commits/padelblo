@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
-import ScoreTrend from '../components/ScoreTrend.jsx'
-
-const CATEGORIAS = ['Volea', 'Saque', 'Recepción', 'Ataque', 'Defensa']
 
 export default function StudentDashboard() {
   const [name, setName] = useState('')
   const [sessions, setSessions] = useState([])
-  const [filter, setFilter] = useState('Todos')
   const sessionRefs = useRef({})
 
   useEffect(() => {
@@ -21,29 +17,17 @@ export default function StudentDashboard() {
         .single()
       setName(profile?.name ?? '')
 
-      // select('*') ya trae el campo `read`, usado por el indicador de notificación
       const { data } = await supabase
         .from('sessions')
         .select('*')
         .eq('status', 'ready')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
       setSessions(data ?? [])
     }
     load()
   }, [])
 
-  // Agrupa las notas por categoría para alimentar los marcadores de evolución
-  const historyByCategory = CATEGORIAS.reduce((acc, cat) => {
-    acc[cat] = sessions
-      .filter((s) => s.training_type === cat)
-      .map((s) => ({ score: s.score ?? 0, date: s.created_at }))
-    return acc
-  }, {})
-
-  const filtered = filter === 'Todos' ? sessions : sessions.filter((s) => s.training_type === filter)
-
-  // La más reciente sin leer es la que activa el punto rojo
-  const unread = sessions.filter((s) => !s.read).slice(-1)[0]
+  const unread = sessions.find((s) => !s.read)
 
   async function goToNewSession() {
     if (!unread) return
@@ -77,67 +61,43 @@ export default function StudentDashboard() {
             )}
           </AnimatePresence>
         </div>
-        <p className="text-court-line/50 text-sm mb-6">Evolución por categoría</p>
-
-        {/* Marcadores de evolución — el diferencial de valor de padelblo */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          {CATEGORIAS.filter((c) => historyByCategory[c].length > 0).map((c) => (
-            <ScoreTrend key={c} category={c} history={historyByCategory[c]} />
-          ))}
-        </div>
+        <p className="text-court-line/50 text-sm mb-8">Este es tu progreso</p>
 
         <div className="net-divider mb-6" />
 
-        <h2 className="font-display text-2xl text-court-line mb-4">Historial</h2>
-
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-          {['Todos', ...CATEGORIAS].map((c) => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              className={`whitespace-nowrap text-sm rounded-full px-4 py-1.5 border transition
-                ${filter === c ? 'bg-ball text-court-950 border-ball' : 'border-court-700 text-court-line/60'}`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-
         <div className="space-y-3">
-          {filtered
-            .slice()
-            .reverse()
-            .map((s, i) => (
-              <motion.a
-                key={s.id}
-                ref={(el) => (sessionRefs.current[s.id] = el)}
-                href={s.pdf_url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => {
-                  if (!s.read) {
-                    supabase.from('sessions').update({ read: true }).eq('id', s.id)
-                    setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, read: true } : x)))
-                  }
-                }}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                whileTap={{ scale: 0.98 }}
-                className="relative flex items-center justify-between bg-court-900 border border-court-700 rounded-xl px-5 py-4 hover:border-ball transition"
-              >
-                {!s.read && <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-clay" />}
-                <div>
-                  <p className="font-medium">{s.training_type}</p>
-                  <p className="text-court-line/40 text-xs font-mono">
-                    {new Date(s.created_at).toLocaleDateString('es-ES')}
-                  </p>
-                </div>
-                <span className="font-display text-2xl text-ball">{s.score?.toFixed(1)}</span>
-              </motion.a>
-            ))}
-          {filtered.length === 0 && (
-            <p className="text-court-line/50 text-sm">Aún no hay entrenamientos en esta categoría.</p>
+          {sessions.map((s, i) => (
+            <motion.a
+              key={s.id}
+              ref={(el) => (sessionRefs.current[s.id] = el)}
+              href={s.pdf_url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => {
+                if (!s.read) {
+                  supabase.from('sessions').update({ read: true }).eq('id', s.id)
+                  setSessions((prev) => prev.map((x) => (x.id === s.id ? { ...x, read: true } : x)))
+                }
+              }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              whileTap={{ scale: 0.98 }}
+              className="relative flex items-center justify-between bg-court-900 border border-court-700 rounded-xl px-5 py-4 hover:border-ball transition"
+            >
+              {!s.read && <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-clay" />}
+              <div>
+                <p className="font-medium">{s.template?.nombre_entrenamiento || 'Entrenamiento'}</p>
+                <p className="text-court-line/40 text-xs font-mono mt-0.5">
+                  {new Date(s.created_at).toLocaleDateString('es-ES')}
+                </p>
+              </div>
+              <span className="text-ball text-sm">Ver →</span>
+            </motion.a>
+          ))}
+
+          {sessions.length === 0 && (
+            <p className="text-court-line/50 text-sm">Aún no hay entrenamientos por aquí.</p>
           )}
         </div>
       </div>
