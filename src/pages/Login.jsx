@@ -7,6 +7,7 @@ export default function Login() {
   const { inviteCode } = useParams()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
+  const [studentName, setStudentName] = useState('')
   const [sent, setSent] = useState(false)
 
   useEffect(() => {
@@ -14,11 +15,13 @@ export default function Login() {
       if (!session) return
 
       if (inviteCode) {
+        const savedName = localStorage.getItem('padelblo_pending_name') || null
         try {
-          await supabase.rpc('accept_invite', { p_code: inviteCode })
+          await supabase.rpc('accept_invite', { p_code: inviteCode, p_name: savedName })
         } catch (e) {
           console.warn('Invitación ya usada o no válida', e)
         }
+        localStorage.removeItem('padelblo_pending_name')
         navigate('/alumno', { replace: true })
         return
       }
@@ -38,6 +41,9 @@ export default function Login() {
 
   async function handleLogin(e) {
     e.preventDefault()
+    if (inviteCode && studentName.trim()) {
+      localStorage.setItem('padelblo_pending_name', studentName.trim())
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -70,6 +76,16 @@ export default function Login() {
           </p>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
+            {inviteCode && (
+              <input
+                type="text"
+                required
+                placeholder="Tu nombre"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                className="w-full bg-court-900 border border-court-700 rounded-xl px-4 py-3 text-court-line placeholder:text-court-line/30 focus:outline-none focus:ring-2 focus:ring-ball transition"
+              />
+            )}
             <input
               type="email"
               required

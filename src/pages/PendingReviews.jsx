@@ -14,7 +14,6 @@ export default function PendingReviews() {
 
   async function load() {
     setLoading(true)
-    // students(name) trae el nombre del alumno de cada sesión en la misma consulta
     const { data } = await supabase
       .from('sessions')
       .select('*, students(name)')
@@ -25,7 +24,12 @@ export default function PendingReviews() {
   }
 
   async function sendToStudent(id) {
-    await supabase.from('sessions').update({ status: 'ready' }).eq('id', id)
+    const { error } = await supabase.from('sessions').update({ status: 'ready' }).eq('id', id)
+    if (error) {
+      console.error('Error al enviar:', error)
+      alert('No se pudo enviar: ' + error.message)
+      return
+    }
     setSessions((prev) => prev.filter((s) => s.id !== id))
   }
 
@@ -78,7 +82,7 @@ export default function PendingReviews() {
                     {s.template?.nombre_entrenamiento || 'Entrenamiento'}
                   </p>
                   <div className="flex gap-2">
-                    <a
+                    
                       href={s.pdf_url}
                       target="_blank"
                       rel="noreferrer"
