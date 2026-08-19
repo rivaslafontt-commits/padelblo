@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Login() {
   const { inviteCode } = useParams()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [studentName, setStudentName] = useState('')
   const [sent, setSent] = useState(false)
@@ -15,13 +16,12 @@ export default function Login() {
       if (!session) return
 
       if (inviteCode) {
-        const savedName = localStorage.getItem('padelblo_pending_name') || null
+        const nameFromUrl = searchParams.get('name')
         try {
-          await supabase.rpc('accept_invite', { p_code: inviteCode, p_name: savedName })
+          await supabase.rpc('accept_invite', { p_code: inviteCode, p_name: nameFromUrl })
         } catch (e) {
           console.warn('Invitación ya usada o no válida', e)
         }
-        localStorage.removeItem('padelblo_pending_name')
         navigate('/alumno', { replace: true })
         return
       }
@@ -37,17 +37,15 @@ export default function Login() {
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [navigate, inviteCode])
+  }, [navigate, inviteCode, searchParams])
 
   async function handleLogin(e) {
     e.preventDefault()
-    if (studentName.trim()) {
-      localStorage.setItem('padelblo_pending_name', studentName.trim())
-    }
+    const nameParam = studentName.trim() ? `?name=${encodeURIComponent(studentName.trim())}` : ''
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}${inviteCode ? `/join/${inviteCode}` : ''}`,
+        emailRedirectTo: `${window.location.origin}${inviteCode ? `/join/${inviteCode}${nameParam}` : ''}`,
       },
     })
     if (!error) setSent(true)
