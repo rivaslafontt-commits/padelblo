@@ -41,7 +41,7 @@ export default function Login() {
 
   async function handleLogin(e) {
     e.preventDefault()
-    if (inviteCode && studentName.trim()) {
+    if (studentName.trim()) {
       localStorage.setItem('padelblo_pending_name', studentName.trim())
     }
     const { error } = await supabase.auth.signInWithOtp({
@@ -76,16 +76,14 @@ export default function Login() {
           </p>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
-            {inviteCode && (
-              <input
-                type="text"
-                required
-                placeholder="Tu nombre"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                className="w-full bg-court-900 border border-court-700 rounded-xl px-4 py-3 text-court-line placeholder:text-court-line/30 focus:outline-none focus:ring-2 focus:ring-ball transition"
-              />
-            )}
+            <input
+              type="text"
+              required
+              placeholder="Tu nombre"
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
+              className="w-full bg-court-900 border border-court-700 rounded-xl px-4 py-3 text-court-line placeholder:text-court-line/30 focus:outline-none focus:ring-2 focus:ring-ball transition"
+            />
             <input
               type="email"
               required
