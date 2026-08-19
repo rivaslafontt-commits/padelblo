@@ -83,7 +83,7 @@ export default function PendingReviews() {
                   </p>
                   <div className="flex gap-2">
                     
-                      href={s.pdf_url}
+                      <a href={s.pdf_url}
                       target="_blank"
                       rel="noreferrer"
                       className="flex-1 text-center text-sm border border-court-700 rounded-lg py-2 hover:border-ball transition"
