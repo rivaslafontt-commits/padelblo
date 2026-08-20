@@ -18,13 +18,27 @@ export default function RecordSession() {
       .from('session-audio')
       .upload(fileName, blob)
 
-    if (!uploadError) {
-      await supabase.from('sessions').insert({
-        student_id: studentId,
-        status: 'processing',
-      })
-      setDone(true)
+    if (uploadError) {
+      console.error('Error subiendo audio:', uploadError)
+      alert('No se pudo subir el audio: ' + uploadError.message)
+      setUploading(false)
+      return
     }
+
+    const { error: insertError } = await supabase.from('sessions').insert({
+      student_id: studentId,
+      audio_path: fileName,
+      status: 'processing',
+    })
+
+    if (insertError) {
+      console.error('Error creando la sesión:', insertError)
+      alert('No se pudo guardar la sesión: ' + insertError.message)
+      setUploading(false)
+      return
+    }
+
+    setDone(true)
     setUploading(false)
   }
 
